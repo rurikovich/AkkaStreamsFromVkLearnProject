@@ -2,11 +2,13 @@ package sample.stream
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import akka.stream.OverflowStrategy.fail
+import akka.stream.scaladsl.{Flow, Source}
 import com.vk.api.sdk.client.VkApiClient
 import com.vk.api.sdk.client.actors.ServiceActor
 import com.vk.api.sdk.httpclient.HttpTransportClient
-import com.vk.api.sdk.streaming.clients.{StreamingEventHandler, VkStreamingApiClient}
 import com.vk.api.sdk.streaming.clients.actors.StreamingActor
+import com.vk.api.sdk.streaming.clients.{StreamingEventHandler, VkStreamingApiClient}
 import com.vk.api.sdk.streaming.objects.StreamingCallbackMessage
 
 object VkStreamingProcessing {
@@ -33,16 +35,25 @@ object VkStreamingProcessing {
     val value = "vk"
 
     try
-       streamingClient.rules.add(streamingActortor, tag, value).execute
+      streamingClient.rules.add(streamingActortor, tag, value).execute
     catch {
       case e: Exception =>
         e.printStackTrace()
     }
 
 
+    val vkMessagesSource = Source.actorRef[String](200, fail)
+
+    val sunnySource = vkMessagesSource.filter(!_.isEmpty)
+
+    val ref = Flow[String]
+      .to(akka.stream.scaladsl.Sink foreach println)
+      .runWith(sunnySource)
+
+
     streamingClient.stream.get(streamingActortor, new StreamingEventHandler() {
       override def handle(message: StreamingCallbackMessage): Unit = {
-        System.out.println(message.getEvent.getText)
+        ref ! message.getEvent.getText
       }
     }).execute
 
