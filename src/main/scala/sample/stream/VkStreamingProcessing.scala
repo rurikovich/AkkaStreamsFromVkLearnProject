@@ -16,9 +16,10 @@ import scala.collection.JavaConversions._
 object VkStreamingProcessing {
   val OK_CODE = 100
 
-  val appId = 6273957
-  val accessToken = "039164ab039164ab039164abfb03cedf0e00391039164ab598bc5f21d283fc052250a2d"
-  val clientSecret = "5rLSNuklraQD6mRjJXPx"
+  val myConfig = new MyConfig()
+  val appId: String = myConfig.envOrElseConfig("appId")
+  val accessToken: String = myConfig.envOrElseConfig("accessToken")
+  val clientSecret: String = myConfig.envOrElseConfig("clientSecret")
 
   def main(args: Array[String]): Unit = {
 
@@ -28,14 +29,14 @@ object VkStreamingProcessing {
     val transportClient = new HttpTransportClient
     val vkClient = new VkApiClient(transportClient)
     val streamingClient = new VkStreamingApiClient(transportClient)
-    val actor = new ServiceActor(appId, clientSecret, accessToken)
+    val actor = new ServiceActor(appId.toInt, clientSecret, accessToken)
     var getServerUrlResponse = vkClient.streaming.getServerUrl(actor).execute
     val streamingActor = new StreamingActor(getServerUrlResponse.getEndpoint, getServerUrlResponse.getKey)
 
     val tag = "44"
     val value = "привет"
-    val rules:StreamingGetRulesResponse = streamingClient.rules.get(streamingActor).execute()
-    if (!rules.getRules.toList.map(r=>r.getValue).contains(value)) {
+    val rules: StreamingGetRulesResponse = streamingClient.rules.get(streamingActor).execute()
+    if (!rules.getRules.toList.map(r => r.getValue).contains(value)) {
       streamingClient.rules.add(streamingActor, tag, value).execute
     }
 
